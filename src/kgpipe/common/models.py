@@ -65,6 +65,8 @@ class DataFormat(Enum):
     TEXT = "txt"
     XML = "xml"
     ANY = "any"
+
+    DIR = ""
     
     # Tool-specific formats
     PARIS_CSV = "paris.csv"

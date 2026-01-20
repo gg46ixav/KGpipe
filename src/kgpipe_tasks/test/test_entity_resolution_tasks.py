@@ -1,7 +1,8 @@
 from kgpipe.common import Data, DataFormat
 from kgpipe_tasks.entity_resolution.matcher.paris_rdf_matcher import paris_entity_matching
+from kgpipe_tasks.entity_resolution.matcher.deepmatcher_csv_matcher import deepmatcher_entity_matching
 from kgpipe_tasks.entity_resolution.matcher.jedai_tab_matcher import pyjedai_entity_matching
-from kgpipe_tasks.entity_resolution.fusion.simple import fusion_union_rdf, union_matched_rdf, union_matched_rdf_combined, fusion_first_value, select_first_value
+#from kgpipe_tasks.entity_resolution.fusion.simple import fusion_union_rdf, union_matched_rdf, union_matched_rdf_combined, fusion_first_value, select_first_value
 from kgpipe_tasks.entity_resolution.entity_match import label_based_entity_linker
 from . import get_test_data_path
 
@@ -94,6 +95,62 @@ def test_pyjedai_entity_matching():
     with open(output_file.name, 'r') as f:
         print(f.read())
     print(json.dumps(report.__dict__, indent=4, default=str))
+
+    # TODO delete output file/dir (requires correct permissions)
+    #   we can use another docker call to delete the file/dir
+
+
+@pytest.mark.docker
+def test_pyjedai_abt_buy_entity_matching():
+    source_csv_path = get_test_data_path("csv/abt-buy-ccer/abt_100.csv")
+    target_csv_path = get_test_data_path("csv/abt-buy-ccer/buy_100.csv")
+    output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".er.json")
+
+    data_source_csv = Data(source_csv_path, DataFormat.CSV)
+    data_target_csv = Data(target_csv_path, DataFormat.CSV)
+    data_output = Data(output_file.name, DataFormat.ER_JSON)
+
+    report = pyjedai_entity_matching.run(
+        [data_source_csv, data_target_csv],
+        [data_output],
+        stable_files_override=True
+    )
+
+    assert report.status == "success"
+
+    with open(output_file.name, 'r') as f:
+        print(f.read())
+    print(json.dumps(report.__dict__, indent=4, default=str))
+
+
+# === DEEPMATCHER ===
+@pytest.mark.docker
+def test_deepmatcher_entity_matching():
+    source_csv_dir_path = get_test_data_path("csv/deepmatcher")
+    test = "test_test.csv"
+    train = "test_train.csv"
+    valid = "test_valid.csv"
+    unlabeled = get_test_data_path("csv/deepmatcher/test_unlabeled.csv")
+
+    output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pth")
+
+    data_source_dir_csv = Data(source_csv_dir_path, DataFormat.DIR)
+    train_data = Data(train, DataFormat.CSV)
+    test_data = Data(test, DataFormat.CSV)
+    valid_data = Data(valid, DataFormat.CSV)
+    unlabeled_data = Data(unlabeled, DataFormat.CSV)
+
+    data_output = Data(output_file.name, DataFormat.ANY)
+
+    report = deepmatcher_entity_matching.run(
+        [data_source_dir_csv, train_data, valid_data, test_data, unlabeled_data],
+        [data_output],
+        stable_files_override=True
+    )
+
+    assert report.status == "success"
+
+    #print(json.dumps(report.__dict__, indent=4, default=str))
 
     # TODO delete output file/dir (requires correct permissions)
     #   we can use another docker call to delete the file/dir
